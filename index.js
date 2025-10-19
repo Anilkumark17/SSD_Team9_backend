@@ -9,48 +9,45 @@ const authMiddleware = require("./src/midlewares/authmiddleware");
 const app = express();
 const server = http.createServer(app);
 
-// Setup socket.io
-const io = new Server(server, {
-  cors: { origin: "*" },
-});
-
-app.use(cors());
+// ✅ Enable CORS
+app.use(cors({ origin: "*", credentials: true }));
 app.use(express.json());
 
-// Public routes (signup, login, etc.)
+// ✅ Public routes
 app.use("/auth", authRoutes);
 
-// Protected routes example
+// ✅ Protected route example
 app.use(authMiddleware);
 app.get("/protected", (req, res) => {
   res.json({ message: "You are authorized!", user: req.user });
 });
 
-// ---------------- SOCKET.IO ----------------
+// ✅ WebSocket Setup
+const io = new Server(server, {
+  cors: { origin: "*" },
+});
+
 io.on("connection", (socket) => {
   console.log("⚡ A user connected:", socket.id);
 
-  // Student/Professor joins a class room
-  socket.on("joinClass", (classCode) => {
-    socket.join(classCode);
-    console.log(`👥 User ${socket.id} joined class: ${classCode}`);
+  // Join a specific room (e.g., class, ward, or ICU)
+  socket.on("joinRoom", (roomCode) => {
+    socket.join(roomCode);
+    console.log(`👥 User ${socket.id} joined room: ${roomCode}`);
   });
 
-  // Student posts a question
-  socket.on("askQuestion", (data) => {
-    console.log("📩 New Question:", data);
-
-    // Broadcast only inside the same class room
-    io.to(data.classCode).emit("newQuestion", data);
+  // Example: user sends message/question
+  socket.on("sendMessage", (data) => {
+    console.log("📩 New Message:", data);
+    io.to(data.roomCode).emit("newMessage", data);
   });
 
-  // Handle disconnect
   socket.on("disconnect", () => {
     console.log("❌ User disconnected:", socket.id);
   });
 });
 
-// ---------------- SERVER ----------------
-server.listen(5000, () => {
-  console.log("✅ Server running on port 5000");
+const PORT =  5000;
+server.listen(PORT, () => {
+  console.log(`✅ Server running on http://localhost:${PORT}`);
 });
